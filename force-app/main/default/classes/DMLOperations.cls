@@ -292,8 +292,27 @@ public with sharing class DMLOperations {
      * @param numOfCases The number of cases to create.
      */
     public static void createAndDeleteCases(String accountId, Integer numOfCases) {
-        // Insert the cases
+        //Check parameters
+        if (String.isBlank(accountId) || numOfCases == null || numOfCases <= 0) {
+            // Handle invalid parameters gracefully
+            return;
+        }
+        //Initialize list to hold Case records
+        List <Case> casesToInsert = new List <Case>();
 
+        //Loop to create cases
+        for (Integer i = 0; i < numOfCases; i++) {
+            Case newCase = new Case(
+                AccountId = accountId,
+                Subject = 'Case ' + (i + 1),
+                Status = 'New'
+            );
+            casesToInsert.add(newCase);
+        }
+
+        // Insert the cases
+        insert casesToInsert;
         // Delete the cases
+        delete casesToInsert;
     }
 }
