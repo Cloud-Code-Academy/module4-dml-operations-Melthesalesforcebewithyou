@@ -161,11 +161,52 @@ public with sharing class DMLOperations {
      * @param oppNames The list of Opportunity names.
      */
     public static void upsertOpportunities(String accountName, List<String> oppNames) {
-        // Loop through each Opportunity name
-            // Create an Opportunity with the given name
-            // Add the Opportunity to the list
+        if (String.isBlank(accountName) || oppNames == null || oppNames.isEmpty()) {
+            throw new IllegalArgumentException('Account name and opportunity names must be provided.');
+        }
+        
+        //Check if the account exists
+        Account account;
+        List<Account> accounts = [SELECT Id, Name FROM Account WHERE Name = :accountName LIMIT 1];
+        
+        if (accounts.isEmpty()) {
+            //If the account does not exist, create it
+            account = new Account(Name = accountName);
+            insert account;
+        } else {
+            account = accounts[0];
+        }
+        
+        //Get existing opportunities for the given names associated with the account
+        Map<String, Opportunity> existingOppMap = new Map<String, Opportunity>();
+        List<Opportunity> existingOpportunities = [
+            SELECT Id, Name 
+            FROM Opportunity 
+            WHERE Name IN :oppNames AND AccountId = :account.Id
+        ];
+        for (Opportunity opp : existingOpportunities) {
+            existingOppMap.put(opp.Name, opp);
+        }
+
+        //Insert or update opportunities
+        List<Opportunity> opportunitiesToUpsert = new List<Opportunity>();
+        for (String oppName : oppNames) {
+            if (existingOppMap.containsKey(oppName)) {
+                // Update existing opportunity if needed
+                Opportunity existingOpp = existingOppMap.get(oppName);
+                // Add any field updates here if needed
+                opportunitiesToUpsert.add(existingOpp);
+            } else {
+                // Create new opportunity
+                Opportunity newOpp = new Opportunity(Name = oppName, AccountId = account.Id, StageName = 'Prospecting', CloseDate = Date.today().addDays(30));
+                opportunitiesToUpsert.add(newOpp);
+            }
+        }
+        
+        // Upsert opp
+        upsert opportunitiesToUpsert;
     }
-    
+
     /**
      * Question 9
 	 * Upserts an Account with the specified name.
